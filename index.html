@@ -3,27 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pferde-Farbgenetik Rechner (MVP)</title>
+    <title>MDR Farbgenetik Rechner</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <div class="container">
       <header class="header">
         <div>
-          <h1>Pferde-Farbgenetik Rechner</h1>
-          <p class="muted">
-            MVP: Basis-Loci (Extension, Agouti, Grey, Cream, Dun). Alles läuft lokal im Browser.
-          </p>
+          <h1>MDR Farbgenetik Rechner</h1>
         </div>
       </header>
 
       <main class="grid">
         <section class="card">
-          <h2>Eltern-Genotypen</h2>
+          <h2>Genetik der Eltern</h2>
 
           <div class="twoCol">
             <div>
-              <h3>Elter 1</h3>
+              <h3>Stute</h3>
               <div class="formRow">
                 <label for="p1_E">Extension (E/e)</label>
                 <select id="p1_E"></select>
@@ -75,7 +72,7 @@
             </div>
 
             <div>
-              <h3>Elter 2</h3>
+              <h3>Hengst</h3>
               <div class="formRow">
                 <label for="p2_E">Extension (E/e)</label>
                 <select id="p2_E"></select>
@@ -134,21 +131,11 @@
 
           <details class="help">
             <summary>Hinweise</summary>
-            <ul>
-              <li>
-                <b>Grey (G)</b> überdeckt auf Dauer die Grundfarbe. Deshalb wird “Schimmel (Grey)” extra
-                ausgewiesen.
-              </li>
-              <li>
-                Das ist ein <b>MVP</b> zum Lernen mit Cursor. Später können wir z. B. Tobiano, Frame
-                Overo, Sabino, Splash, Silver, Champagne, Pearl, KIT-Varianten usw. ergänzen.
-              </li>
-            </ul>
           </details>
         </section>
 
         <section class="card">
-          <h2>Ergebnis</h2>
+          <h2>Mögliche Farbe des Fohlens</h2>
           <div id="result" class="result muted">Wähle die Genotypen und klicke auf „Berechnen“.</div>
         </section>
       </main>
