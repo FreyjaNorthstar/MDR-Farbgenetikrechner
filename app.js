@@ -1,6 +1,6 @@
 const LOCI = [
   // Reihenfolge passend zur UI:
-  // Extension, Agouti, Dun, (Cream/Pearl), Champagne, Grey, Silver, Flaxen, Sooty, Rabicano
+  // Extension, Agouti, Dun, (Cream/Pearl), Champagne, Grey, Silver, Overo, Splashed White, Flaxen, Sooty, Rabicano
   {
     key: "E",
     label: "Extension (E/e)",
@@ -9,9 +9,20 @@ const LOCI = [
   },
   {
     key: "A",
-    label: "Agouti (A+, A, At, a)",
-    alleleOrder: ["A+", "A", "At", "a"], // Dominanz: A+ > A > At > a
-    genotypes: ["A+A+", "A+A", "A+At", "A+a", "AA", "AAt", "Aa", "AtAt", "Ata", "aa"],
+    label: "Agouti (Ap, A1, At, a0)",
+    alleleOrder: ["Ap", "A1", "At", "a0"], // Dominanz: Ap > A1 > At > a0
+    genotypes: [
+      "ApAp",
+      "ApA1",
+      "ApAt",
+      "Apa0",
+      "A1A1",
+      "A1At",
+      "A1a0",
+      "AtAt",
+      "Ata0",
+      "a0a0",
+    ],
   },
   {
     key: "D",
@@ -21,11 +32,11 @@ const LOCI = [
   },
   {
     key: "CrPrl",
-    label: "Cream / Pearl (Cr/cr/prl)",
-    alleleOrder: ["Cr", "cr", "prl"],
+    label: "Cream / Pearl (Cr/cr/pl)",
+    alleleOrder: ["Cr", "cr", "pl"],
     // mögliche Kombis: crcr, crprl, Crcr, Crprl, CrCr, prlprl
     // (Reihenfolge wird intern via alleleOrder normalisiert)
-    genotypes: ["CrCr", "Crcr", "Crprl", "crcr", "crprl", "prlprl"],
+    genotypes: ["CrCr", "Crcr", "Crpl", "crcr", "crpl", "plpl"],
   },
   {
     key: "Ch",
@@ -46,22 +57,34 @@ const LOCI = [
     genotypes: ["ZZ", "Zz", "zz"],
   },
   {
+    key: "O",
+    label: "Overo (O/o)",
+    alleleOrder: ["O", "o"],
+    genotypes: ["OO", "Oo", "oo"],
+  },
+  {
+    key: "SPL",
+    label: "Splashed White (SPL/spl)",
+    alleleOrder: ["SPL", "spl"],
+    genotypes: ["SPLSPL", "SPLspl", "splspl"],
+  },
+  {
     key: "Fl",
     label: "Flaxen (Fl/fl)",
     alleleOrder: ["Fl", "fl"],
     genotypes: ["FlFl", "Flfl", "flfl"],
   },
   {
-    key: "So",
-    label: "Sooty (So/so)",
-    alleleOrder: ["So", "so"],
-    genotypes: ["SoSo", "Soso", "soso"],
+    key: "Sty",
+    label: "Sooty (Sty/sty)",
+    alleleOrder: ["Sty", "sty"],
+    genotypes: ["StySty", "Stysty", "stysty"],
   },
   {
-    key: "Rb",
-    label: "Rabicano (Rb/rb)",
-    alleleOrder: ["Rb", "rb"],
-    genotypes: ["RbRb", "Rbrb", "rbrb"],
+    key: "Ra",
+    label: "Rabicano (Ra/ra)",
+    alleleOrder: ["Ra", "ra"],
+    genotypes: ["RaRa", "Rara", "rara"],
   },
 ];
 
@@ -149,11 +172,10 @@ function roundPct(x) {
 
 function agoutiCategory(agoutiGenotype) {
   // Rückgabe: "wildbay" | "bay" | "sealbrown" | "black"
-  // Dominanz: A+ > A > At > a
-  if (agoutiGenotype === "aa") return "black";
-  if (agoutiGenotype.includes("A+")) return "wildbay";
-  // Wichtig: "A+" enthält auch "A" als Teilstring, daher A+ zuerst prüfen.
-  if (agoutiGenotype.includes("A")) return "bay";
+  // Dominanz: Ap > A1 > At > a0
+  if (agoutiGenotype === "a0a0") return "black";
+  if (agoutiGenotype.includes("Ap")) return "wildbay";
+  if (agoutiGenotype.includes("A1")) return "bay";
   if (agoutiGenotype.includes("At")) return "sealbrown";
   return "black";
 }
@@ -163,7 +185,7 @@ function addVisibleModifiers(name, modifiers) {
   return `${name} (${modifiers.join(", ")})`;
 }
 
-function derivePhenotype({ E, A, G, CrPrl, Ch, Z, D, Fl, So, Rb }) {
+function derivePhenotype({ E, A, G, CrPrl, Ch, Z, D, O, SPL, Fl, Sty, Ra }) {
   // Sehr vereinfachte Ableitung, aber konsistent und erweiterbar.
   // 1) Basisfarbe via E/A
   const hasBlackPigment = E !== "ee";
@@ -179,12 +201,12 @@ function derivePhenotype({ E, A, G, CrPrl, Ch, Z, D, Fl, So, Rb }) {
   }
 
   // 2) Cream / Pearl (gleicher Locus)
-  const crCount = CrPrl === "CrCr" ? 2 : CrPrl === "Crcr" || CrPrl === "Crprl" ? 1 : 0;
-  const prlCount = CrPrl === "prlprl" ? 2 : CrPrl === "crprl" || CrPrl === "Crprl" ? 1 : 0;
+  const crCount = CrPrl === "CrCr" ? 2 : CrPrl === "Crcr" || CrPrl === "Crpl" ? 1 : 0;
+  const plCount = CrPrl === "plpl" ? 2 : CrPrl === "crpl" || CrPrl === "Crpl" ? 1 : 0;
 
-  const isPearl = prlCount === 2;
-  const isPearlCarrier = prlCount === 1 && crCount === 0; // crprl
-  const isCreamPearl = prlCount === 1 && crCount === 1; // Crprl
+  const isPearl = plCount === 2;
+  const isPearlCarrier = plCount === 1 && crCount === 0; // crpl
+  const isCreamPearl = plCount === 1 && crCount === 1; // Crpl
 
   let creamNote = null;
   let pearlNote = null;
@@ -279,25 +301,33 @@ function derivePhenotype({ E, A, G, CrPrl, Ch, Z, D, Fl, So, Rb }) {
   }
 
   // Sooty: dominant, immer sichtbar
-  if (So !== "soso") visibleMods.push("Sooty");
+  if (Sty !== "stysty") visibleMods.push("Sooty");
 
   // Rabicano: dominant, immer sichtbar
-  if (Rb !== "rbrb") visibleMods.push("Rabicano");
+  if (Ra !== "rara") visibleMods.push("Rabicano");
 
   const withMods = addVisibleModifiers(withDun, visibleMods);
 
-  // 7) Grey überschreibt (langfristig)
+  // 7) Scheckungen (anhängen, Name sonst unverändert)
+  const hasOvero = O !== "oo";
+  const hasSplash = SPL !== "splspl";
+  let withPatterns = withMods;
+  if (hasOvero && hasSplash) withPatterns = `${withMods} Pinto`;
+  else if (hasOvero) withPatterns = `${withMods} Overo`;
+  else if (hasSplash) withPatterns = `${withMods} Splashed White`;
+
+  // 8) Grey überschreibt (langfristig)
   const isGrey = G !== "gg";
   const tags = [];
   if (creamNote) tags.push(creamNote);
   if (pearlNote) tags.push(pearlNote);
-  else if (isPearlCarrier) tags.push("Pearl Träger (crprl)");
+  else if (isPearlCarrier) tags.push("Pearl Träger (crpl)");
   if (champagneNote) tags.push(champagneNote);
   if (silverNote) tags.push(silverNote);
   if (dunNote) tags.push(dunNote);
   if (isGrey) tags.push("Grey");
 
-  const shown = isGrey ? `Grey (${withMods})` : withMods;
+  const shown = isGrey ? `Grey (${withPatterns})` : withPatterns;
   const detail = null;
   return { shown, detail, tags };
 }
@@ -379,6 +409,18 @@ function render() {
   const phenoEntries = [...phenoDist.entries()].map(([label, p]) => ({ label, p }));
   const phenoTable = formatDistributionTable(phenoEntries, "Phänotyp (vereinfacht)");
 
+  // Warnungen (z.B. Letalität)
+  const overoDist = distsByLocus.find((x) => x.locusKey === "O")?.dist;
+  const lethalOO = overoDist ? (overoDist.get("OO") ?? 0) : 0;
+  const warnings = [];
+  if (lethalOO > 0) {
+    warnings.push(
+      `<div class="warn"><b>Warnung:</b> Erwartete Wahrscheinlichkeit für <b>OO</b> (Overo homozygot) ist ${roundPct(
+        lethalOO
+      )}% und gilt als letal.</div>`
+    );
+  }
+
   const details = [...detailDist.entries()]
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6)
@@ -393,6 +435,7 @@ function render() {
   $("result").classList.remove("muted");
   $("result").innerHTML = `
     ${phenoTable}
+    ${warnings.length ? `<div style="margin-top:10px">${warnings.join("")}</div>` : ""}
     ${detailsBlock}
     <div style="height:12px"></div>
     <div class="pill">Genotyp-Verteilungen je Locus</div>
@@ -410,9 +453,11 @@ function resetToDefaults() {
     Ch: "chch",
     Z: "zz",
     D: "dd",
+    O: "oo",
+    SPL: "splspl",
     Fl: "FlFl",
-    So: "soso",
-    Rb: "rbrb",
+    Sty: "stysty",
+    Ra: "rara",
   };
 
   for (const locus of LOCI) {
