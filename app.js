@@ -1,4 +1,6 @@
 const LOCI = [
+  // Reihenfolge passend zur UI:
+  // Extension, Agouti, Dun, (Cream/Pearl), Champagne, Grey, Silver
   {
     key: "E",
     label: "Extension (E/e)",
@@ -12,10 +14,10 @@ const LOCI = [
     genotypes: ["A+A+", "A+A", "A+At", "A+a", "AA", "AAt", "Aa", "AtAt", "Ata", "aa"],
   },
   {
-    key: "G",
-    label: "Grey (G/g)",
-    alleleOrder: ["G", "g"],
-    genotypes: ["GG", "Gg", "gg"],
+    key: "D",
+    label: "Dun (D/d)",
+    alleleOrder: ["D", "d"],
+    genotypes: ["DD", "Dd", "dd"],
   },
   {
     key: "Cr",
@@ -36,16 +38,16 @@ const LOCI = [
     genotypes: ["ChCh", "Chch", "chch"],
   },
   {
+    key: "G",
+    label: "Grey (G/g)",
+    alleleOrder: ["G", "g"],
+    genotypes: ["GG", "Gg", "gg"],
+  },
+  {
     key: "Z",
     label: "Silver (Z/z)",
     alleleOrder: ["Z", "z"],
     genotypes: ["ZZ", "Zz", "zz"],
-  },
-  {
-    key: "D",
-    label: "Dun (D/d)",
-    alleleOrder: ["D", "d"],
-    genotypes: ["DD", "Dd", "dd"],
   },
 ];
 
@@ -288,10 +290,28 @@ function escapeHtml(s) {
     .replaceAll("'", "&#039;");
 }
 
+function parseCreamPearlCombo(value) {
+  // value: "Crcr|prlprl" => { Cr: "Crcr", Prl: "prlprl" }
+  const [Cr, Prl] = String(value).split("|");
+  if (!Cr || !Prl) throw new Error(`Ungültige Cream/Pearl-Kombination: "${value}"`);
+  return { Cr, Prl };
+}
+
 function readParents() {
   const p1 = {};
   const p2 = {};
+
+  // Cream/Pearl kommen aus einem gemeinsamen Dropdown
+  const c1 = parseCreamPearlCombo($("p1_CrPrl").value);
+  const c2 = parseCreamPearlCombo($("p2_CrPrl").value);
+  p1.Cr = c1.Cr;
+  p1.Prl = c1.Prl;
+  p2.Cr = c2.Cr;
+  p2.Prl = c2.Prl;
+
   for (const locus of LOCI) {
+    // Cr/Prl sind bereits gesetzt (gemeinsames Dropdown)
+    if (locus.key === "Cr" || locus.key === "Prl") continue;
     p1[locus.key] = $(makeSelectId(1, locus.key)).value;
     p2[locus.key] = $(makeSelectId(2, locus.key)).value;
   }
@@ -371,7 +391,13 @@ function resetToDefaults() {
     Z: "zz",
     D: "dd",
   };
+
+  // gemeinsames Cream/Pearl Default
+  $("p1_CrPrl").value = `${defaults.Cr}|${defaults.Prl}`;
+  $("p2_CrPrl").value = `${defaults.Cr}|${defaults.Prl}`;
+
   for (const locus of LOCI) {
+    if (locus.key === "Cr" || locus.key === "Prl") continue;
     $(makeSelectId(1, locus.key)).value = defaults[locus.key] ?? locus.genotypes[0];
     $(makeSelectId(2, locus.key)).value = defaults[locus.key] ?? locus.genotypes[0];
   }
@@ -382,12 +408,23 @@ function resetToDefaults() {
 function init() {
   for (const locus of LOCI) {
     for (const parentIdx of [1, 2]) {
+      if (locus.key === "Cr" || locus.key === "Prl") continue;
       const sel = $(makeSelectId(parentIdx, locus.key));
       sel.innerHTML = locus.genotypes
         .map((gt) => `<option value="${gt}">${gt}</option>`)
         .join("");
     }
   }
+
+  // gemeinsames Cream/Pearl Dropdown füllen (3×3 Kombis)
+  const cr = LOCI.find((l) => l.key === "Cr")?.genotypes ?? ["CrCr", "Crcr", "crcr"];
+  const prl = LOCI.find((l) => l.key === "Prl")?.genotypes ?? ["PrlPrl", "Prlprl", "prlprl"];
+  const combos = [];
+  for (const c of cr) for (const p of prl) combos.push({ value: `${c}|${p}`, label: `${c} + ${p}` });
+  const comboHtml = combos.map((o) => `<option value="${o.value}">${o.label}</option>`).join("");
+  $("p1_CrPrl").innerHTML = comboHtml;
+  $("p2_CrPrl").innerHTML = comboHtml;
+
   $("calcBtn").addEventListener("click", render);
   $("resetBtn").addEventListener("click", resetToDefaults);
 
