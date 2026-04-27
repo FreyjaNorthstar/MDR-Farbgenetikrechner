@@ -1,6 +1,6 @@
 const LOCI = [
   // Reihenfolge passend zur UI:
-  // Extension, Agouti, Dun, (Cream/Pearl), Champagne, Grey, Silver, Overo, Splashed White, Flaxen, Sooty, Rabicano
+  // Extension, Agouti, Dun, (Cream/Pearl), Champagne, Grey, Silver, Overo, Splashed White, Appaloosa, PATN1, KIT, Flaxen, Sooty, Rabicano
   {
     key: "E",
     label: "Extension (E/e)",
@@ -29,6 +29,7 @@ const LOCI = [
     label: "Dun (D/d)",
     alleleOrder: ["D", "d"],
     genotypes: ["DD", "Dd", "dd"],
+    allowBlank: true,
   },
   {
     key: "CrPrl",
@@ -37,54 +38,100 @@ const LOCI = [
     // mögliche Kombis: crcr, crprl, Crcr, Crprl, CrCr, prlprl
     // (Reihenfolge wird intern via alleleOrder normalisiert)
     genotypes: ["CrCr", "Crcr", "Crpl", "crcr", "crpl", "plpl"],
+    allowBlank: true,
   },
   {
     key: "Ch",
     label: "Champagne (Ch/ch)",
     alleleOrder: ["Ch", "ch"],
     genotypes: ["ChCh", "Chch", "chch"],
+    allowBlank: true,
   },
   {
     key: "G",
     label: "Grey (G/g)",
     alleleOrder: ["G", "g"],
     genotypes: ["GG", "Gg", "gg"],
+    allowBlank: true,
   },
   {
     key: "Z",
     label: "Silver (Z/z)",
     alleleOrder: ["Z", "z"],
     genotypes: ["ZZ", "Zz", "zz"],
+    allowBlank: true,
   },
   {
     key: "O",
     label: "Overo (O/o)",
     alleleOrder: ["O", "o"],
     genotypes: ["OO", "Oo", "oo"],
+    allowBlank: true,
   },
   {
     key: "SPL",
     label: "Splashed White (SPL/spl)",
     alleleOrder: ["SPL", "spl"],
     genotypes: ["SPLSPL", "SPLspl", "splspl"],
+    allowBlank: true,
+  },
+  {
+    key: "LP",
+    label: "Appaloosa (LP/lp)",
+    alleleOrder: ["LP", "lp"],
+    genotypes: ["LPLP", "LPlp", "lplp"],
+    allowBlank: true,
+  },
+  {
+    key: "PATN1",
+    label: "PATN1 (P1/p1)",
+    alleleOrder: ["P1", "p1"],
+    genotypes: ["P1P1", "P1p1", "p1p1"],
+    allowBlank: true,
+  },
+  {
+    key: "KIT",
+    label: "KIT (TO/WI/Rn/SB/0)",
+    alleleOrder: ["WI", "TO", "Rn", "SB", "0"],
+    genotypes: [
+      "00",
+      "TO0",
+      "WI0",
+      "Rn0",
+      "SB0",
+      "TOTO",
+      "TOWI",
+      "TORn",
+      "TOSB",
+      "WIWI",
+      "WIRn",
+      "WISB",
+      "RnRn",
+      "RnSB",
+      "SBSB",
+    ],
+    allowBlank: true,
   },
   {
     key: "Fl",
     label: "Flaxen (Fl/fl)",
     alleleOrder: ["Fl", "fl"],
     genotypes: ["FlFl", "Flfl", "flfl"],
+    allowBlank: true,
   },
   {
     key: "Sty",
     label: "Sooty (Sty/sty)",
     alleleOrder: ["Sty", "sty"],
     genotypes: ["StySty", "Stysty", "stysty"],
+    allowBlank: true,
   },
   {
     key: "Ra",
     label: "Rabicano (Ra/ra)",
     alleleOrder: ["Ra", "ra"],
     genotypes: ["RaRa", "Rara", "rara"],
+    allowBlank: true,
   },
 ];
 
@@ -132,6 +179,10 @@ function gametesFromGenotype(genotype, alleleOrder) {
 }
 
 function punnett(parent1Genotype, parent2Genotype, alleleOrder) {
+  // Leere Auswahl => Locus wird ignoriert
+  if (!parent1Genotype || !parent2Genotype) {
+    return new Map([["", 1]]);
+  }
   const g1 = normalizeGenotype(parent1Genotype, alleleOrder);
   const g2 = normalizeGenotype(parent2Genotype, alleleOrder);
   const gam1 = gametesFromGenotype(g1, alleleOrder);
@@ -191,6 +242,7 @@ function coreBaseCategory(baseName) {
 }
 
 function classifyCrPrl(CrPrl) {
+  if (!CrPrl) return { cream: 0, pearl: 0, pearlCarrier: false, isCrpl: false };
   // Cream/Pearl liegen auf demselben Locus: Cr / cr / pl
   // Cream: Crcr => 1, CrCr => 2, Crpl => 1 (wird später wie 2 benannt), sonst 0
   const cream = CrPrl === "CrCr" ? 2 : CrPrl === "Crcr" || CrPrl === "Crpl" ? 1 : 0;
@@ -323,7 +375,17 @@ function computeColorName({ base, hasDun, hasChampagne, CrPrl }) {
   return { name: base, pearlCarrier };
 }
 
-function derivePhenotype({ E, A, G, CrPrl, Ch, Z, D, O, SPL, Fl, Sty, Ra }) {
+function kitFlags(kitGenotype) {
+  if (!kitGenotype) return { hasTO: false, hasWI: false, hasRn: false, hasSB: false };
+  const g = String(kitGenotype);
+  const hasTO = g.includes("TO");
+  const hasWI = g.includes("WI");
+  const hasRn = g.includes("Rn");
+  const hasSB = g.includes("SB");
+  return { hasTO, hasWI, hasRn, hasSB };
+}
+
+function derivePhenotype({ E, A, G, CrPrl, Ch, Z, D, O, SPL, LP, PATN1, KIT, Fl, Sty, Ra }) {
   // Sehr vereinfachte Ableitung, aber konsistent und erweiterbar.
   // 1) Basisfarbe via E/A
   const hasBlackPigment = E !== "ee";
@@ -339,11 +401,18 @@ function derivePhenotype({ E, A, G, CrPrl, Ch, Z, D, O, SPL, Fl, Sty, Ra }) {
   }
 
   // 2) Farbnamen-Logik (D + Ch + Cr/pl)
-  const hasDun = D !== "dd";
-  const hasChampagne = Ch !== "chch";
+  const hasDun = !!D && D !== "dd";
+  const hasChampagne = !!Ch && Ch !== "chch";
   const { name: baseColorName, pearlCarrier } = computeColorName({ base, hasDun, hasChampagne, CrPrl });
 
-  // 3) Silver
+  // 3) KIT Flags
+  const k = kitFlags(KIT);
+  const hasRoan = k.hasRn;
+  const hasTobiano = k.hasTO;
+  const hasSabino = k.hasSB;
+  const hasDominantWhite = k.hasWI;
+
+  // 4) Silver
   const zCount = Z === "ZZ" ? 2 : Z === "Zz" ? 1 : 0;
   const isSilver = zCount > 0 && hasBlackPigment;
   let silverNote = null;
@@ -356,37 +425,62 @@ function derivePhenotype({ E, A, G, CrPrl, Ch, Z, D, O, SPL, Fl, Sty, Ra }) {
     }
   }
 
-  // 4) Präfix/Suffix-Anhänge (Reihenfolge wie gewünscht)
+  // 5) Präfix/Suffix-Anhänge (Reihenfolge wie gewünscht)
   const prefixes = [];
   const suffixes = [];
 
   // Präfixe: Flaxen → Silver → Sooty
   if (Fl === "flfl" && base === "Chestnut" && CrPrl === "crcr") prefixes.push("Flaxen");
   if (isSilver) prefixes.push("Silver");
-  if (Sty !== "stysty") prefixes.push("Sooty");
+  if (Sty && Sty !== "stysty") prefixes.push("Sooty");
 
-  // Suffixe: Rabicano → Overo/Splashed White/Pinto
+  // Suffixe: Rabicano → Roan → (Scheckungen)
   if (Ra !== "rara") suffixes.push("Rabicano");
+  if (hasRoan) suffixes.push("Roan");
 
   const hasOvero = O !== "oo";
   const hasSplash = SPL !== "splspl";
-  if (hasOvero && hasSplash) suffixes.push("Pinto");
-  else if (hasOvero) suffixes.push("Overo");
-  else if (hasSplash) suffixes.push("Splashed White");
+  const hasLeopard = LP !== "lplp";
+
+  const spotting = {
+    overo: hasOvero,
+    splash: hasSplash,
+    leopard: hasLeopard,
+    tobiano: hasTobiano,
+    sabino: hasSabino,
+  };
+  const spottingCount = Object.values(spotting).filter(Boolean).length;
+
+  if (spottingCount >= 2) {
+    const onlyTovero = spotting.tobiano && spotting.overo && spottingCount === 2;
+    if (onlyTovero) suffixes.push("Tovero");
+    else suffixes.push("Pinto");
+  } else if (spottingCount === 1) {
+    if (spotting.overo) suffixes.push("Overo");
+    else if (spotting.splash) suffixes.push("Splashed White");
+    else if (spotting.leopard) suffixes.push("Leopard");
+    else if (spotting.tobiano) suffixes.push("Tobiano");
+    else if (spotting.sabino) suffixes.push("Sabino");
+  }
 
   const withAffixes = `${prefixes.join(" ")}${prefixes.length ? " " : ""}${baseName}${
     suffixes.length ? " " : ""
   }${suffixes.join(" ")}`.trim();
 
+  const withDominantWhite = hasDominantWhite ? `Dominant White (${withAffixes})` : withAffixes;
+
   // 8) Grey überschreibt (langfristig)
-  const isGrey = G !== "gg";
+  const isGrey = !!G && G !== "gg";
   const tags = [];
   if (pearlCarrier) tags.push("Pearl Träger (crpl)");
   if (silverNote) tags.push(silverNote);
   if (isGrey) tags.push("Grey");
 
-  // Grey: immer nur "Grey" + voller Name ohne Grey in Klammern
-  const shown = isGrey ? `Grey (${withAffixes})` : withAffixes;
+  // Dominant White ist dominanter als Grey:
+  // - wenn WI vorhanden: immer "Dominant White (...)"
+  // - sonst wenn Grey vorhanden: "Grey (...)"
+  // - sonst normal
+  const shown = hasDominantWhite ? withDominantWhite : isGrey ? `Grey (${withAffixes})` : withAffixes;
   const detail = null;
   return { shown, detail, tags };
 }
@@ -507,16 +601,20 @@ function resetToDefaults() {
   const defaults = {
     E: "Ee",
     A: "Aa",
-    G: "gg",
-    CrPrl: "crcr",
-    Ch: "chch",
-    Z: "zz",
-    D: "dd",
-    O: "oo",
-    SPL: "splspl",
-    Fl: "FlFl",
-    Sty: "stysty",
-    Ra: "rara",
+    // alle anderen Loci: leer = ignorieren
+    D: "",
+    CrPrl: "",
+    Ch: "",
+    G: "",
+    Z: "",
+    O: "",
+    SPL: "",
+    LP: "",
+    PATN1: "",
+    KIT: "",
+    Fl: "",
+    Sty: "",
+    Ra: "",
   };
 
   for (const locus of LOCI) {
@@ -531,9 +629,12 @@ function init() {
   for (const locus of LOCI) {
     for (const parentIdx of [1, 2]) {
       const sel = $(makeSelectId(parentIdx, locus.key));
-      sel.innerHTML = locus.genotypes
-        .map((gt) => `<option value="${gt}">${gt}</option>`)
-        .join("");
+      const blank = locus.allowBlank ? `<option value="">—</option>` : "";
+      sel.innerHTML =
+        blank +
+        locus.genotypes
+          .map((gt) => `<option value="${gt}">${gt === "" ? "—" : gt}</option>`)
+          .join("");
     }
   }
 
