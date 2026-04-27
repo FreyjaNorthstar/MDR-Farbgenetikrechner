@@ -24,6 +24,12 @@ const LOCI = [
     genotypes: ["CrCr", "Crcr", "crcr"],
   },
   {
+    key: "Ch",
+    label: "Champagne (Ch/ch)",
+    alleleOrder: ["Ch", "ch"],
+    genotypes: ["ChCh", "Chch", "chch"],
+  },
+  {
     key: "D",
     label: "Dun (D/d)",
     alleleOrder: ["D", "d"],
@@ -113,7 +119,7 @@ function roundPct(x) {
   return Math.round(x * 1000) / 10; // 0.1%
 }
 
-function derivePhenotype({ E, A, G, Cr, D }) {
+function derivePhenotype({ E, A, G, Cr, Ch, D }) {
   // Sehr vereinfachte Ableitung, aber konsistent und erweiterbar.
   // 1) Basisfarbe via E/A
   const hasBlackPigment = E !== "ee";
@@ -137,23 +143,38 @@ function derivePhenotype({ E, A, G, Cr, D }) {
     creamNote = "2× Cream";
   }
 
-  // 3) Dun
+  // 3) Champagne (vereinfacht)
+  const chCount = Ch === "ChCh" ? 2 : Ch === "Chch" ? 1 : 0;
+  let champagneNote = null;
+  let baseLight = baseCream;
+  if (chCount > 0) {
+    champagneNote = chCount === 2 ? "Champagne (homozygot)" : "Champagne";
+    // Benennung basiert hier auf der *Grundfarbe* (E/A), weil das am stabilsten ist.
+    // Kombis (z.B. Cream+Champagne) werden als Tag geführt und nicht als eigene Namensmatrix.
+    if (base === "Fuchs") baseLight = "Gold Champagne";
+    else if (base === "Brauner") baseLight = "Amber Champagne";
+    else if (base === "Rappe") baseLight = "Classic Champagne";
+    else baseLight = `${baseCream} (Champagne)`;
+  }
+
+  // 4) Dun
   const isDun = D !== "dd";
   let dunNote = null;
-  let withDun = baseCream;
+  let withDun = baseLight;
   if (isDun) {
     dunNote = "Dun";
     // grobe deutsche Bezeichnung
-    if (baseCream === "Fuchs") withDun = "Fuchsfalbe (Red Dun)";
-    else if (baseCream === "Brauner") withDun = "Falbe (Bay Dun)";
-    else if (baseCream === "Rappe") withDun = "Mausfalbe (Grullo)";
-    else withDun = `${baseCream} (Dun)`;
+    if (baseLight === "Fuchs") withDun = "Fuchsfalbe (Red Dun)";
+    else if (baseLight === "Brauner") withDun = "Falbe (Bay Dun)";
+    else if (baseLight === "Rappe") withDun = "Mausfalbe (Grullo)";
+    else withDun = `${baseLight} (Dun)`;
   }
 
-  // 4) Grey überschreibt (langfristig)
+  // 5) Grey überschreibt (langfristig)
   const isGrey = G !== "gg";
   const tags = [];
   if (creamNote) tags.push(creamNote);
+  if (champagneNote) tags.push(champagneNote);
   if (dunNote) tags.push(dunNote);
   if (isGrey) tags.push("Schimmel (Grey)");
 
@@ -266,6 +287,7 @@ function resetToDefaults() {
     A: "Aa",
     G: "gg",
     Cr: "crcr",
+    Ch: "chch",
     D: "dd",
   };
   for (const locus of LOCI) {
