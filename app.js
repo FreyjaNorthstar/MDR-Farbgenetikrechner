@@ -20,16 +20,12 @@ const LOCI = [
     genotypes: ["DD", "Dd", "dd"],
   },
   {
-    key: "Cr",
-    label: "Cream (Cr/cr)",
-    alleleOrder: ["Cr", "cr"],
-    genotypes: ["CrCr", "Crcr", "crcr"],
-  },
-  {
-    key: "Prl",
-    label: "Pearl (Prl/prl)",
-    alleleOrder: ["Prl", "prl"],
-    genotypes: ["PrlPrl", "Prlprl", "prlprl"],
+    key: "CrPrl",
+    label: "Cream / Pearl (Cr/cr/prl)",
+    alleleOrder: ["Cr", "cr", "prl"],
+    // mögliche Kombis: crcr, crprl, Crcr, Crprl, CrCr, prlprl
+    // (Reihenfolge wird intern via alleleOrder normalisiert)
+    genotypes: ["CrCr", "Crcr", "Crprl", "crcr", "crprl", "prlprl"],
   },
   {
     key: "Ch",
@@ -144,84 +140,86 @@ function agoutiCategory(agoutiGenotype) {
   return "black";
 }
 
-function derivePhenotype({ E, A, G, Cr, Prl, Ch, Z, D }) {
+function derivePhenotype({ E, A, G, CrPrl, Ch, Z, D }) {
   // Sehr vereinfachte Ableitung, aber konsistent und erweiterbar.
   // 1) Basisfarbe via E/A
   const hasBlackPigment = E !== "ee";
   let base;
   if (!hasBlackPigment) {
-    base = "Fuchs";
+    base = "Chestnut";
   } else {
     const aCat = agoutiCategory(A);
-    if (aCat === "black") base = "Rappe";
+    if (aCat === "black") base = "Black";
     else if (aCat === "wildbay") base = "Wildbay";
-    else if (aCat === "bay") base = "Brauner";
-    else base = "Schwarzbraun (Seal Brown)";
+    else if (aCat === "bay") base = "Bay";
+    else base = "Sealbrown";
   }
 
-  // 2) Cream
-  const crCount = Cr === "CrCr" ? 2 : Cr === "Crcr" ? 1 : 0;
-  let creamNote = null;
-  let baseCream = base;
-  if (crCount === 1) {
-    if (base === "Fuchs") baseCream = "Palomino";
-    if (base === "Brauner") baseCream = "Buckskin";
-    if (base === "Rappe") baseCream = "Smoky Black";
-    creamNote = "1× Cream";
-  } else if (crCount === 2) {
-    if (base === "Fuchs") baseCream = "Cremello";
-    if (base === "Brauner") baseCream = "Perlino";
-    if (base === "Rappe") baseCream = "Smoky Cream";
-    creamNote = "2× Cream";
-  }
+  // 2) Cream / Pearl (gleicher Locus)
+  const crCount = CrPrl === "CrCr" ? 2 : CrPrl === "Crcr" || CrPrl === "Crprl" ? 1 : 0;
+  const prlCount = CrPrl === "prlprl" ? 2 : CrPrl === "crprl" || CrPrl === "Crprl" ? 1 : 0;
 
-  // 3) Pearl (vereinfacht) + Interaktion mit Cream
-  const prlCount = Prl === "PrlPrl" ? 2 : Prl === "Prlprl" ? 1 : 0;
   const isPearl = prlCount === 2;
-  const isPearlCarrier = prlCount === 1;
+  const isPearlCarrier = prlCount === 1 && crCount === 0; // crprl
+  const isCreamPearl = prlCount === 1 && crCount === 1; // Crprl
 
+  let creamNote = null;
   let pearlNote = null;
-  let basePearl = baseCream;
+  let baseLight0 = base;
 
-  if (isPearl) {
-    pearlNote = "Pearl";
-
-    // Cream+Pearl wird oft als "pseudo double cream" beschrieben.
-    // Für dieses MVP modellieren wir das so: 1×Cream + prlprl => wie 2×Cream in der Benennung.
+  // Cream-Benennung (nur wenn nicht prlprl und nicht Crprl)
+  if (!isPearl && !isCreamPearl) {
     if (crCount === 1) {
-      if (base === "Fuchs") basePearl = "Cremello (Cream+Pearl)";
-      else if (base === "Brauner") basePearl = "Perlino (Cream+Pearl)";
-      else if (base === "Rappe") basePearl = "Smoky Cream (Cream+Pearl)";
-      else basePearl = `${baseCream} (Cream+Pearl)`;
-      pearlNote = "Pearl (mit Cream)";
-    } else if (crCount === 0) {
-      // Ohne Cream benennen wir Pearl separat, angelehnt an gängige Begriffe.
-      if (base === "Fuchs") basePearl = "Apricot Pearl";
-      else if (base === "Brauner") basePearl = "Amber Pearl";
-      else if (base === "Rappe") basePearl = "Sable Pearl";
-      else basePearl = `${baseCream} (Pearl)`;
+      if (base === "Chestnut") baseLight0 = "Palomino";
+      else if (base === "Bay" || base === "Wildbay") baseLight0 = "Buckskin";
+      else if (base === "Black") baseLight0 = "Smoky Black";
+      else if (base === "Sealbrown") baseLight0 = "Smoky Brown";
+      creamNote = "Cream (Crcr)";
+    } else if (crCount === 2) {
+      if (base === "Chestnut") baseLight0 = "Cremello";
+      else if (base === "Bay" || base === "Wildbay") baseLight0 = "Perlino";
+      else if (base === "Black") baseLight0 = "Smoky Cream";
+      else if (base === "Sealbrown") baseLight0 = "Sealbrown Cream";
+      creamNote = "Cream (CrCr)";
     } else {
-      // crCount === 2: Name bleibt, Pearl nur als Tag
-      basePearl = baseCream;
-      pearlNote = "Pearl (mit 2×Cream)";
+      baseLight0 = base;
     }
   }
 
-  // 4) Champagne (vereinfacht)
-  const chCount = Ch === "ChCh" ? 2 : Ch === "Chch" ? 1 : 0;
-  let champagneNote = null;
-  let baseLight = basePearl;
-  if (chCount > 0) {
-    champagneNote = chCount === 2 ? "Champagne (homozygot)" : "Champagne";
-    // Benennung basiert hier auf der *Grundfarbe* (E/A), weil das am stabilsten ist.
-    // Kombis (z.B. Cream+Champagne) werden als Tag geführt und nicht als eigene Namensmatrix.
-    if (base === "Fuchs") baseLight = "Gold Champagne";
-    else if (base === "Brauner") baseLight = "Amber Champagne";
-    else if (base === "Rappe") baseLight = "Classic Champagne";
-    else baseLight = `${basePearl} (Champagne)`;
+  // Pearl (prlprl)
+  if (isPearl) {
+    if (base === "Chestnut") baseLight0 = "Apricot";
+    else if (base === "Bay" || base === "Wildbay") baseLight0 = "Pearl Bay";
+    else if (base === "Black") baseLight0 = "Pearl Black";
+    else if (base === "Sealbrown") baseLight0 = "Pearl Brown";
+    else baseLight0 = `${base} (Pearl)`;
+    pearlNote = "Pearl (prlprl)";
+  } else if (isCreamPearl) {
+    // Crprl wird wie CrCr benannt
+    if (base === "Chestnut") baseLight0 = "Cremello";
+    else if (base === "Bay" || base === "Wildbay") baseLight0 = "Perlino";
+    else if (base === "Black") baseLight0 = "Smoky Cream";
+    else if (base === "Sealbrown") baseLight0 = "Sealbrown Cream";
+    else baseLight0 = `${base} (Crprl)`;
+    // im Namen nicht extra berücksichtigen, aber als Tag ist es manchmal hilfreich
+    pearlNote = "Cream/Pearl (Crprl)";
   }
 
-  // 5) Silver (vereinfacht)
+  // 3) Champagne (vereinfacht)
+  const chCount = Ch === "ChCh" ? 2 : Ch === "Chch" ? 1 : 0;
+  let champagneNote = null;
+  let baseLight = baseLight0;
+  if (chCount > 0) {
+    champagneNote = chCount === 2 ? "Champagne (homozygot)" : "Champagne";
+    // Champagne-Benennung basiert auf der Grundfarbe (E/A)
+    if (base === "Chestnut") baseLight = "Gold Champagne";
+    else if (base === "Bay" || base === "Wildbay") baseLight = "Amber Champagne";
+    else if (base === "Black") baseLight = "Classic Champagne";
+    else if (base === "Sealbrown") baseLight = "Sable Champagne";
+    else baseLight = `${baseLight0} (Champagne)`;
+  }
+
+  // 4) Silver (vereinfacht)
   const zCount = Z === "ZZ" ? 2 : Z === "Zz" ? 1 : 0;
   const isSilver = zCount > 0 && hasBlackPigment;
   let silverNote = null;
@@ -235,31 +233,32 @@ function derivePhenotype({ E, A, G, Cr, Prl, Ch, Z, D }) {
     }
   }
 
-  // 6) Dun
+  // 5) Dun
   const isDun = D !== "dd";
   let dunNote = null;
   let withDun = baseSilver;
   if (isDun) {
     dunNote = "Dun";
-    // grobe deutsche Bezeichnung
-    if (baseSilver === "Fuchs") withDun = "Fuchsfalbe (Red Dun)";
-    else if (baseSilver === "Brauner") withDun = "Falbe (Bay Dun)";
-    else if (baseSilver === "Rappe") withDun = "Mausfalbe (Grullo)";
-    else withDun = `${baseSilver} (Dun)`;
+    // gewünschte Benennung
+    if (base === "Chestnut") withDun = "Red Dun";
+    else if (base === "Bay" || base === "Wildbay") withDun = "Classic Dun";
+    else if (base === "Black") withDun = "Grulla";
+    else if (base === "Sealbrown") withDun = "Brown Dun";
+    else withDun = `${baseSilver} Dun`;
   }
 
-  // 7) Grey überschreibt (langfristig)
+  // 6) Grey überschreibt (langfristig)
   const isGrey = G !== "gg";
   const tags = [];
   if (creamNote) tags.push(creamNote);
   if (pearlNote) tags.push(pearlNote);
-  else if (isPearlCarrier) tags.push("Pearl (Träger)");
+  else if (isPearlCarrier) tags.push("Pearl Träger (crprl)");
   if (champagneNote) tags.push(champagneNote);
   if (silverNote) tags.push(silverNote);
   if (dunNote) tags.push(dunNote);
-  if (isGrey) tags.push("Schimmel (Grey)");
+  if (isGrey) tags.push("Grey");
 
-  const shown = isGrey ? "Schimmel (Grey)" : withDun;
+  const shown = isGrey ? "Grey" : withDun;
   const detail = isGrey ? `Grundfarbe darunter: ${withDun}` : null;
   return { shown, detail, tags };
 }
@@ -290,28 +289,11 @@ function escapeHtml(s) {
     .replaceAll("'", "&#039;");
 }
 
-function parseCreamPearlCombo(value) {
-  // value: "Crcr|prlprl" => { Cr: "Crcr", Prl: "prlprl" }
-  const [Cr, Prl] = String(value).split("|");
-  if (!Cr || !Prl) throw new Error(`Ungültige Cream/Pearl-Kombination: "${value}"`);
-  return { Cr, Prl };
-}
-
 function readParents() {
   const p1 = {};
   const p2 = {};
 
-  // Cream/Pearl kommen aus einem gemeinsamen Dropdown
-  const c1 = parseCreamPearlCombo($("p1_CrPrl").value);
-  const c2 = parseCreamPearlCombo($("p2_CrPrl").value);
-  p1.Cr = c1.Cr;
-  p1.Prl = c1.Prl;
-  p2.Cr = c2.Cr;
-  p2.Prl = c2.Prl;
-
   for (const locus of LOCI) {
-    // Cr/Prl sind bereits gesetzt (gemeinsames Dropdown)
-    if (locus.key === "Cr" || locus.key === "Prl") continue;
     p1[locus.key] = $(makeSelectId(1, locus.key)).value;
     p2[locus.key] = $(makeSelectId(2, locus.key)).value;
   }
@@ -385,19 +367,13 @@ function resetToDefaults() {
     E: "Ee",
     A: "Aa",
     G: "gg",
-    Cr: "crcr",
-    Prl: "prlprl",
+    CrPrl: "crcr",
     Ch: "chch",
     Z: "zz",
     D: "dd",
   };
 
-  // gemeinsames Cream/Pearl Default
-  $("p1_CrPrl").value = `${defaults.Cr}|${defaults.Prl}`;
-  $("p2_CrPrl").value = `${defaults.Cr}|${defaults.Prl}`;
-
   for (const locus of LOCI) {
-    if (locus.key === "Cr" || locus.key === "Prl") continue;
     $(makeSelectId(1, locus.key)).value = defaults[locus.key] ?? locus.genotypes[0];
     $(makeSelectId(2, locus.key)).value = defaults[locus.key] ?? locus.genotypes[0];
   }
@@ -408,22 +384,12 @@ function resetToDefaults() {
 function init() {
   for (const locus of LOCI) {
     for (const parentIdx of [1, 2]) {
-      if (locus.key === "Cr" || locus.key === "Prl") continue;
       const sel = $(makeSelectId(parentIdx, locus.key));
       sel.innerHTML = locus.genotypes
         .map((gt) => `<option value="${gt}">${gt}</option>`)
         .join("");
     }
   }
-
-  // gemeinsames Cream/Pearl Dropdown füllen (3×3 Kombis)
-  const cr = LOCI.find((l) => l.key === "Cr")?.genotypes ?? ["CrCr", "Crcr", "crcr"];
-  const prl = LOCI.find((l) => l.key === "Prl")?.genotypes ?? ["PrlPrl", "Prlprl", "prlprl"];
-  const combos = [];
-  for (const c of cr) for (const p of prl) combos.push({ value: `${c}|${p}`, label: `${c} + ${p}` });
-  const comboHtml = combos.map((o) => `<option value="${o.value}">${o.label}</option>`).join("");
-  $("p1_CrPrl").innerHTML = comboHtml;
-  $("p2_CrPrl").innerHTML = comboHtml;
 
   $("calcBtn").addEventListener("click", render);
   $("resetBtn").addEventListener("click", resetToDefaults);
