@@ -24,10 +24,22 @@ const LOCI = [
     genotypes: ["CrCr", "Crcr", "crcr"],
   },
   {
+    key: "Prl",
+    label: "Pearl (Prl/prl)",
+    alleleOrder: ["Prl", "prl"],
+    genotypes: ["PrlPrl", "Prlprl", "prlprl"],
+  },
+  {
     key: "Ch",
     label: "Champagne (Ch/ch)",
     alleleOrder: ["Ch", "ch"],
     genotypes: ["ChCh", "Chch", "chch"],
+  },
+  {
+    key: "Z",
+    label: "Silver (Z/z)",
+    alleleOrder: ["Z", "z"],
+    genotypes: ["ZZ", "Zz", "zz"],
   },
   {
     key: "D",
@@ -119,7 +131,7 @@ function roundPct(x) {
   return Math.round(x * 1000) / 10; // 0.1%
 }
 
-function derivePhenotype({ E, A, G, Cr, Ch, D }) {
+function derivePhenotype({ E, A, G, Cr, Prl, Ch, Z, D }) {
   // Sehr vereinfachte Ableitung, aber konsistent und erweiterbar.
   // 1) Basisfarbe via E/A
   const hasBlackPigment = E !== "ee";
@@ -143,10 +155,42 @@ function derivePhenotype({ E, A, G, Cr, Ch, D }) {
     creamNote = "2× Cream";
   }
 
-  // 3) Champagne (vereinfacht)
+  // 3) Pearl (vereinfacht) + Interaktion mit Cream
+  const prlCount = Prl === "PrlPrl" ? 2 : Prl === "Prlprl" ? 1 : 0;
+  const isPearl = prlCount === 2;
+  const isPearlCarrier = prlCount === 1;
+
+  let pearlNote = null;
+  let basePearl = baseCream;
+
+  if (isPearl) {
+    pearlNote = "Pearl";
+
+    // Cream+Pearl wird oft als "pseudo double cream" beschrieben.
+    // Für dieses MVP modellieren wir das so: 1×Cream + prlprl => wie 2×Cream in der Benennung.
+    if (crCount === 1) {
+      if (base === "Fuchs") basePearl = "Cremello (Cream+Pearl)";
+      else if (base === "Brauner") basePearl = "Perlino (Cream+Pearl)";
+      else if (base === "Rappe") basePearl = "Smoky Cream (Cream+Pearl)";
+      else basePearl = `${baseCream} (Cream+Pearl)`;
+      pearlNote = "Pearl (mit Cream)";
+    } else if (crCount === 0) {
+      // Ohne Cream benennen wir Pearl separat, angelehnt an gängige Begriffe.
+      if (base === "Fuchs") basePearl = "Apricot Pearl";
+      else if (base === "Brauner") basePearl = "Amber Pearl";
+      else if (base === "Rappe") basePearl = "Sable Pearl";
+      else basePearl = `${baseCream} (Pearl)`;
+    } else {
+      // crCount === 2: Name bleibt, Pearl nur als Tag
+      basePearl = baseCream;
+      pearlNote = "Pearl (mit 2×Cream)";
+    }
+  }
+
+  // 4) Champagne (vereinfacht)
   const chCount = Ch === "ChCh" ? 2 : Ch === "Chch" ? 1 : 0;
   let champagneNote = null;
-  let baseLight = baseCream;
+  let baseLight = basePearl;
   if (chCount > 0) {
     champagneNote = chCount === 2 ? "Champagne (homozygot)" : "Champagne";
     // Benennung basiert hier auf der *Grundfarbe* (E/A), weil das am stabilsten ist.
@@ -154,27 +198,44 @@ function derivePhenotype({ E, A, G, Cr, Ch, D }) {
     if (base === "Fuchs") baseLight = "Gold Champagne";
     else if (base === "Brauner") baseLight = "Amber Champagne";
     else if (base === "Rappe") baseLight = "Classic Champagne";
-    else baseLight = `${baseCream} (Champagne)`;
+    else baseLight = `${basePearl} (Champagne)`;
   }
 
-  // 4) Dun
+  // 5) Silver (vereinfacht)
+  const zCount = Z === "ZZ" ? 2 : Z === "Zz" ? 1 : 0;
+  const isSilver = zCount > 0 && hasBlackPigment;
+  let silverNote = null;
+  let baseSilver = baseLight;
+  if (zCount > 0) {
+    if (hasBlackPigment) {
+      silverNote = zCount === 2 ? "Silver (homozygot)" : "Silver";
+      baseSilver = `${baseLight} (Silver)`;
+    } else {
+      silverNote = "Silver (ohne Wirkung bei Fuchs)";
+    }
+  }
+
+  // 6) Dun
   const isDun = D !== "dd";
   let dunNote = null;
-  let withDun = baseLight;
+  let withDun = baseSilver;
   if (isDun) {
     dunNote = "Dun";
     // grobe deutsche Bezeichnung
-    if (baseLight === "Fuchs") withDun = "Fuchsfalbe (Red Dun)";
-    else if (baseLight === "Brauner") withDun = "Falbe (Bay Dun)";
-    else if (baseLight === "Rappe") withDun = "Mausfalbe (Grullo)";
-    else withDun = `${baseLight} (Dun)`;
+    if (baseSilver === "Fuchs") withDun = "Fuchsfalbe (Red Dun)";
+    else if (baseSilver === "Brauner") withDun = "Falbe (Bay Dun)";
+    else if (baseSilver === "Rappe") withDun = "Mausfalbe (Grullo)";
+    else withDun = `${baseSilver} (Dun)`;
   }
 
-  // 5) Grey überschreibt (langfristig)
+  // 7) Grey überschreibt (langfristig)
   const isGrey = G !== "gg";
   const tags = [];
   if (creamNote) tags.push(creamNote);
+  if (pearlNote) tags.push(pearlNote);
+  else if (isPearlCarrier) tags.push("Pearl (Träger)");
   if (champagneNote) tags.push(champagneNote);
+  if (silverNote) tags.push(silverNote);
   if (dunNote) tags.push(dunNote);
   if (isGrey) tags.push("Schimmel (Grey)");
 
@@ -287,7 +348,9 @@ function resetToDefaults() {
     A: "Aa",
     G: "gg",
     Cr: "crcr",
+    Prl: "prlprl",
     Ch: "chch",
+    Z: "zz",
     D: "dd",
   };
   for (const locus of LOCI) {
