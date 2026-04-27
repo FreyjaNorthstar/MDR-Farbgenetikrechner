@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pferde-Farbgenetik Rechner (MVP)</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="header">
+        <div>
+          <h1>Pferde-Farbgenetik Rechner</h1>
+          <p class="muted">
+            MVP: Basis-Loci (Extension, Agouti, Grey, Cream, Dun). Alles läuft lokal im Browser.
+          </p>
+        </div>
+      </header>
+
+      <main class="grid">
+        <section class="card">
+          <h2>Eltern-Genotypen</h2>
+
+          <div class="twoCol">
+            <div>
+              <h3>Elter 1</h3>
+              <div class="formRow">
+                <label for="p1_E">Extension (E/e)</label>
+                <select id="p1_E"></select>
+              </div>
+              <div class="formRow">
+                <label for="p1_A">Agouti (A/a)</label>
+                <select id="p1_A"></select>
+              </div>
+              <div class="formRow">
+                <label for="p1_G">Grey (G/g)</label>
+                <select id="p1_G"></select>
+              </div>
+              <div class="formRow">
+                <label for="p1_Cr">Cream (Cr/cr)</label>
+                <select id="p1_Cr"></select>
+              </div>
+              <div class="formRow">
+                <label for="p1_D">Dun (D/d)</label>
+                <select id="p1_D"></select>
+              </div>
+            </div>
+
+            <div>
+              <h3>Elter 2</h3>
+              <div class="formRow">
+                <label for="p2_E">Extension (E/e)</label>
+                <select id="p2_E"></select>
+              </div>
+              <div class="formRow">
+                <label for="p2_A">Agouti (A/a)</label>
+                <select id="p2_A"></select>
+              </div>
+              <div class="formRow">
+                <label for="p2_G">Grey (G/g)</label>
+                <select id="p2_G"></select>
+              </div>
+              <div class="formRow">
+                <label for="p2_Cr">Cream (Cr/cr)</label>
+                <select id="p2_Cr"></select>
+              </div>
+              <div class="formRow">
+                <label for="p2_D">Dun (D/d)</label>
+                <select id="p2_D"></select>
+              </div>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button id="calcBtn" class="primary">Berechnen</button>
+            <button id="resetBtn" class="secondary">Zurücksetzen</button>
+          </div>
+
+          <details class="help">
+            <summary>Hinweise</summary>
+            <ul>
+              <li>
+                <b>Grey (G)</b> überdeckt auf Dauer die Grundfarbe. Deshalb wird “Schimmel (Grey)” extra
+                ausgewiesen.
+              </li>
+              <li>
+                Das ist ein <b>MVP</b> zum Lernen mit Cursor. Später können wir z. B. Tobiano, Frame
+                Overo, Sabino, Splash, Silver, Champagne, Pearl, KIT-Varianten usw. ergänzen.
+              </li>
+            </ul>
+          </details>
+        </section>
+
+        <section class="card">
+          <h2>Ergebnis</h2>
+          <div id="result" class="result muted">Wähle die Genotypen und klicke auf „Berechnen“.</div>
+        </section>
+      </main>
+
+      <footer class="footer muted">
+        Lokal öffnen: Doppelklick auf <code>index.html</code>.
+      </footer>
+    </div>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>
