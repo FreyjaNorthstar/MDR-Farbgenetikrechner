@@ -7,9 +7,9 @@ const LOCI = [
   },
   {
     key: "A",
-    label: "Agouti (A/a)",
-    alleleOrder: ["A", "a"],
-    genotypes: ["AA", "Aa", "aa"],
+    label: "Agouti (A+, A, At, a)",
+    alleleOrder: ["A+", "A", "At", "a"], // Dominanz: A+ > A > At > a
+    genotypes: ["A+A+", "A+A", "A+At", "A+a", "AA", "AAt", "Aa", "AtAt", "Ata", "aa"],
   },
   {
     key: "G",
@@ -131,13 +131,31 @@ function roundPct(x) {
   return Math.round(x * 1000) / 10; // 0.1%
 }
 
+function agoutiCategory(agoutiGenotype) {
+  // Rückgabe: "wildbay" | "bay" | "sealbrown" | "black"
+  // Dominanz: A+ > A > At > a
+  if (agoutiGenotype === "aa") return "black";
+  if (agoutiGenotype.includes("A+")) return "wildbay";
+  // Wichtig: "A+" enthält auch "A" als Teilstring, daher A+ zuerst prüfen.
+  if (agoutiGenotype.includes("A")) return "bay";
+  if (agoutiGenotype.includes("At")) return "sealbrown";
+  return "black";
+}
+
 function derivePhenotype({ E, A, G, Cr, Prl, Ch, Z, D }) {
   // Sehr vereinfachte Ableitung, aber konsistent und erweiterbar.
   // 1) Basisfarbe via E/A
   const hasBlackPigment = E !== "ee";
   let base;
-  if (!hasBlackPigment) base = "Fuchs";
-  else base = A === "aa" ? "Rappe" : "Brauner";
+  if (!hasBlackPigment) {
+    base = "Fuchs";
+  } else {
+    const aCat = agoutiCategory(A);
+    if (aCat === "black") base = "Rappe";
+    else if (aCat === "wildbay") base = "Wildbay";
+    else if (aCat === "bay") base = "Brauner";
+    else base = "Schwarzbraun (Seal Brown)";
+  }
 
   // 2) Cream
   const crCount = Cr === "CrCr" ? 2 : Cr === "Crcr" ? 1 : 0;
