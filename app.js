@@ -185,6 +185,144 @@ function addVisibleModifiers(name, modifiers) {
   return `${name} (${modifiers.join(", ")})`;
 }
 
+function coreBaseCategory(baseName) {
+  if (baseName === "Bay" || baseName === "Wildbay") return "BayOrWildbay";
+  return baseName;
+}
+
+function classifyCrPrl(CrPrl) {
+  // Cream/Pearl liegen auf demselben Locus: Cr / cr / pl
+  // Cream: Crcr => 1, CrCr => 2, Crpl => 1 (wird später wie 2 benannt), sonst 0
+  const cream = CrPrl === "CrCr" ? 2 : CrPrl === "Crcr" || CrPrl === "Crpl" ? 1 : 0;
+  const pearl = CrPrl === "plpl" ? 2 : 0;
+  const pearlCarrier = CrPrl === "crpl";
+  const isCrpl = CrPrl === "Crpl";
+  return { cream, pearl, pearlCarrier, isCrpl };
+}
+
+function computeColorName({ base, hasDun, hasChampagne, CrPrl }) {
+  const baseCat = coreBaseCategory(base);
+  const { cream, pearl, pearlCarrier, isCrpl } = classifyCrPrl(CrPrl);
+
+  const chOn = hasChampagne;
+  const dOn = hasDun;
+
+  // Pearl (plpl)
+  if (pearl === 2) {
+    // Offene Kombi laut "~folgt~"
+    if (dOn && chOn) return { name: "Unbekannt", pearlCarrier };
+
+    if (dOn) {
+      if (base === "Chestnut") return { name: "Apricot Dun", pearlCarrier };
+      if (baseCat === "BayOrWildbay") return { name: "Pearl Bay Dun", pearlCarrier };
+      if (base === "Black") return { name: "Pearl Black Dun", pearlCarrier };
+      if (base === "Sealbrown") return { name: "Pearl Brown Dun", pearlCarrier };
+    }
+    if (chOn) {
+      if (base === "Chestnut") return { name: "Gold Pearl", pearlCarrier };
+      // ~folgt~: unknown
+      return { name: "Unbekannt", pearlCarrier };
+    }
+
+    if (base === "Chestnut") return { name: "Apricot", pearlCarrier };
+    if (baseCat === "BayOrWildbay") return { name: "Pearl Bay", pearlCarrier };
+    if (base === "Black") return { name: "Pearl Black", pearlCarrier };
+    if (base === "Sealbrown") return { name: "Pearl Brown", pearlCarrier };
+  }
+
+  // Cream/Pearl Kombi (Crpl) wird wie CrCr benannt
+  const creamLike = isCrpl ? 2 : cream;
+
+  // D x Ch (ohne Cream/Pearl)
+  if (dOn && chOn && creamLike === 0) {
+    if (base === "Chestnut") return { name: "Gold Dun", pearlCarrier };
+    if (baseCat === "BayOrWildbay") return { name: "Amber Dun", pearlCarrier };
+    if (base === "Black") return { name: "Champagne Dun", pearlCarrier };
+    if (base === "Sealbrown") return { name: "Sable Dun", pearlCarrier };
+  }
+
+  // D x Cr (Crcr)
+  if (dOn && !chOn && creamLike === 1) {
+    if (base === "Chestnut") return { name: "Dunalino", pearlCarrier };
+    if (base === "Bay") return { name: "Dunskin", pearlCarrier };
+    if (base === "Wildbay") return { name: "Wild Dunskin", pearlCarrier };
+    if (base === "Black") return { name: "Smoky Grulla", pearlCarrier };
+    if (base === "Sealbrown") return { name: "Smoky Brown Dun", pearlCarrier };
+  }
+
+  // D x CrCr / Crpl
+  if (dOn && !chOn && creamLike === 2) {
+    if (base === "Chestnut") return { name: "Cremello Dun", pearlCarrier };
+    if (baseCat === "BayOrWildbay") return { name: "Perlino Dun", pearlCarrier };
+    if (base === "Black") return { name: "Smoky Cream Dun", pearlCarrier };
+    if (base === "Sealbrown") return { name: "Sealbrown Cream Dun", pearlCarrier };
+  }
+
+  // Ch x Cr (Crcr)
+  if (!dOn && chOn && creamLike === 1) {
+    if (base === "Chestnut") return { name: "Gold Cream", pearlCarrier };
+    if (baseCat === "BayOrWildbay") return { name: "Amber Cream", pearlCarrier };
+    if (base === "Black") return { name: "Classic Cream", pearlCarrier };
+    if (base === "Sealbrown") return { name: "Sable Cream", pearlCarrier };
+  }
+
+  // Ch x CrCr / Crpl
+  if (!dOn && chOn && creamLike === 2) {
+    if (base === "Chestnut") return { name: "Cremello Champagne", pearlCarrier };
+    if (baseCat === "BayOrWildbay") return { name: "Perlino Champagne", pearlCarrier };
+    if (base === "Black") return { name: "Smoky Cream Champagne", pearlCarrier };
+    if (base === "Sealbrown") return { name: "Sealbrown Cream Champagne", pearlCarrier };
+  }
+
+  // D x Ch x Cr (Crcr)
+  if (dOn && chOn && creamLike === 1) {
+    if (base === "Chestnut") return { name: "Gold Dun Cream", pearlCarrier };
+    if (baseCat === "BayOrWildbay") return { name: "Amber Dun Cream", pearlCarrier };
+    if (base === "Black") return { name: "Classic Dun Cream", pearlCarrier };
+    if (base === "Sealbrown") return { name: "Sable Dun Cream", pearlCarrier };
+  }
+
+  // ~folgt~: D x Ch x CrCr / Crpl
+  if (dOn && chOn && creamLike === 2) {
+    return { name: "Unbekannt", pearlCarrier };
+  }
+
+  // Fallback: Single-Cream
+  if (!dOn && !chOn && creamLike === 1) {
+    if (base === "Chestnut") return { name: "Palomino", pearlCarrier };
+    if (base === "Bay") return { name: "Buckskin", pearlCarrier };
+    if (base === "Wildbay") return { name: "Wild Buckskin", pearlCarrier };
+    if (base === "Black") return { name: "Smoky Black", pearlCarrier };
+    if (base === "Sealbrown") return { name: "Smoky Brown", pearlCarrier };
+  }
+
+  // Fallback: Double-Cream / Crpl
+  if (!dOn && !chOn && creamLike === 2) {
+    if (base === "Chestnut") return { name: "Cremello", pearlCarrier };
+    if (baseCat === "BayOrWildbay") return { name: "Perlino", pearlCarrier };
+    if (base === "Black") return { name: "Smoky Cream", pearlCarrier };
+    if (base === "Sealbrown") return { name: "Sealbrown Cream", pearlCarrier };
+  }
+
+  // Fallback: Champagne (ohne Dun/Cream)
+  if (!dOn && chOn && creamLike === 0) {
+    if (base === "Chestnut") return { name: "Gold Champagne", pearlCarrier };
+    if (baseCat === "BayOrWildbay") return { name: "Amber Champagne", pearlCarrier };
+    if (base === "Black") return { name: "Classic Champagne", pearlCarrier };
+    if (base === "Sealbrown") return { name: "Sable Champagne", pearlCarrier };
+  }
+
+  // Fallback: Dun (ohne Champagne/Cream)
+  if (dOn && !chOn && creamLike === 0) {
+    if (base === "Chestnut") return { name: "Red Dun", pearlCarrier };
+    if (baseCat === "BayOrWildbay") return { name: "Classic Dun", pearlCarrier };
+    if (base === "Black") return { name: "Grulla", pearlCarrier };
+    if (base === "Sealbrown") return { name: "Brown Dun", pearlCarrier };
+  }
+
+  return { name: base, pearlCarrier };
+}
+
 function derivePhenotype({ E, A, G, CrPrl, Ch, Z, D, O, SPL, Fl, Sty, Ra }) {
   // Sehr vereinfachte Ableitung, aber konsistent und erweiterbar.
   // 1) Basisfarbe via E/A
@@ -200,134 +338,55 @@ function derivePhenotype({ E, A, G, CrPrl, Ch, Z, D, O, SPL, Fl, Sty, Ra }) {
     else base = "Sealbrown";
   }
 
-  // 2) Cream / Pearl (gleicher Locus)
-  const crCount = CrPrl === "CrCr" ? 2 : CrPrl === "Crcr" || CrPrl === "Crpl" ? 1 : 0;
-  const plCount = CrPrl === "plpl" ? 2 : CrPrl === "crpl" || CrPrl === "Crpl" ? 1 : 0;
+  // 2) Farbnamen-Logik (D + Ch + Cr/pl)
+  const hasDun = D !== "dd";
+  const hasChampagne = Ch !== "chch";
+  const { name: baseColorName, pearlCarrier } = computeColorName({ base, hasDun, hasChampagne, CrPrl });
 
-  const isPearl = plCount === 2;
-  const isPearlCarrier = plCount === 1 && crCount === 0; // crpl
-  const isCreamPearl = plCount === 1 && crCount === 1; // Crpl
-
-  let creamNote = null;
-  let pearlNote = null;
-  let baseLight0 = base;
-
-  // Cream-Benennung (nur wenn nicht prlprl und nicht Crprl)
-  if (!isPearl && !isCreamPearl) {
-    if (crCount === 1) {
-      if (base === "Chestnut") baseLight0 = "Palomino";
-      else if (base === "Bay" || base === "Wildbay") baseLight0 = "Buckskin";
-      else if (base === "Black") baseLight0 = "Smoky Black";
-      else if (base === "Sealbrown") baseLight0 = "Smoky Brown";
-      creamNote = "Cream (Crcr)";
-    } else if (crCount === 2) {
-      if (base === "Chestnut") baseLight0 = "Cremello";
-      else if (base === "Bay" || base === "Wildbay") baseLight0 = "Perlino";
-      else if (base === "Black") baseLight0 = "Smoky Cream";
-      else if (base === "Sealbrown") baseLight0 = "Sealbrown Cream";
-      creamNote = "Cream (CrCr)";
-    } else {
-      baseLight0 = base;
-    }
-  }
-
-  // Pearl (prlprl)
-  if (isPearl) {
-    if (base === "Chestnut") baseLight0 = "Apricot";
-    else if (base === "Bay" || base === "Wildbay") baseLight0 = "Pearl Bay";
-    else if (base === "Black") baseLight0 = "Pearl Black";
-    else if (base === "Sealbrown") baseLight0 = "Pearl Brown";
-    else baseLight0 = `${base} (Pearl)`;
-    pearlNote = "Pearl (prlprl)";
-  } else if (isCreamPearl) {
-    // Crprl wird wie CrCr benannt
-    if (base === "Chestnut") baseLight0 = "Cremello";
-    else if (base === "Bay" || base === "Wildbay") baseLight0 = "Perlino";
-    else if (base === "Black") baseLight0 = "Smoky Cream";
-    else if (base === "Sealbrown") baseLight0 = "Sealbrown Cream";
-    else baseLight0 = `${base} (Crprl)`;
-    // im Namen nicht extra berücksichtigen, aber als Tag ist es manchmal hilfreich
-    pearlNote = "Cream/Pearl (Crprl)";
-  }
-
-  // 3) Champagne (vereinfacht)
-  const chCount = Ch === "ChCh" ? 2 : Ch === "Chch" ? 1 : 0;
-  let champagneNote = null;
-  let baseLight = baseLight0;
-  if (chCount > 0) {
-    champagneNote = chCount === 2 ? "Champagne (homozygot)" : "Champagne";
-    // Champagne-Benennung basiert auf der Grundfarbe (E/A)
-    if (base === "Chestnut") baseLight = "Gold Champagne";
-    else if (base === "Bay" || base === "Wildbay") baseLight = "Amber Champagne";
-    else if (base === "Black") baseLight = "Classic Champagne";
-    else if (base === "Sealbrown") baseLight = "Sable Champagne";
-    else baseLight = `${baseLight0} (Champagne)`;
-  }
-
-  // 4) Silver (vereinfacht)
+  // 3) Silver
   const zCount = Z === "ZZ" ? 2 : Z === "Zz" ? 1 : 0;
   const isSilver = zCount > 0 && hasBlackPigment;
   let silverNote = null;
-  let baseSilver = baseLight;
+  const baseName = baseColorName;
   if (zCount > 0) {
     if (hasBlackPigment) {
       silverNote = zCount === 2 ? "Silver (homozygot)" : "Silver";
-      baseSilver = `${baseLight} (Silver)`;
     } else {
       silverNote = "Silver (ohne Wirkung bei Fuchs)";
     }
   }
 
-  // 5) Dun
-  const isDun = D !== "dd";
-  let dunNote = null;
-  let withDun = baseSilver;
-  if (isDun) {
-    dunNote = "Dun";
-    // gewünschte Benennung
-    if (base === "Chestnut") withDun = "Red Dun";
-    else if (base === "Bay" || base === "Wildbay") withDun = "Classic Dun";
-    else if (base === "Black") withDun = "Grulla";
-    else if (base === "Sealbrown") withDun = "Brown Dun";
-    else withDun = `${baseSilver} Dun`;
-  }
+  // 4) Präfix/Suffix-Anhänge (Reihenfolge wie gewünscht)
+  const prefixes = [];
+  const suffixes = [];
 
-  // 6) weitere Gene (sichtbar)
-  const visibleMods = [];
+  // Präfixe: Flaxen → Silver → Sooty
+  if (Fl === "flfl" && base === "Chestnut" && CrPrl === "crcr") prefixes.push("Flaxen");
+  if (isSilver) prefixes.push("Silver");
+  if (Sty !== "stysty") prefixes.push("Sooty");
 
-  // Flaxen: nur sichtbar als flfl bei Grundfarbe Chestnut (und nur wenn keine Aufhellung am Cr/Prl-Locus aktiv ist)
-  if (Fl === "flfl" && base === "Chestnut" && CrPrl === "crcr") {
-    visibleMods.push("Flaxen");
-  }
+  // Suffixe: Rabicano → Overo/Splashed White/Pinto
+  if (Ra !== "rara") suffixes.push("Rabicano");
 
-  // Sooty: dominant, immer sichtbar
-  if (Sty !== "stysty") visibleMods.push("Sooty");
-
-  // Rabicano: dominant, immer sichtbar
-  if (Ra !== "rara") visibleMods.push("Rabicano");
-
-  const withMods = addVisibleModifiers(withDun, visibleMods);
-
-  // 7) Scheckungen (anhängen, Name sonst unverändert)
   const hasOvero = O !== "oo";
   const hasSplash = SPL !== "splspl";
-  let withPatterns = withMods;
-  if (hasOvero && hasSplash) withPatterns = `${withMods} Pinto`;
-  else if (hasOvero) withPatterns = `${withMods} Overo`;
-  else if (hasSplash) withPatterns = `${withMods} Splashed White`;
+  if (hasOvero && hasSplash) suffixes.push("Pinto");
+  else if (hasOvero) suffixes.push("Overo");
+  else if (hasSplash) suffixes.push("Splashed White");
+
+  const withAffixes = `${prefixes.join(" ")}${prefixes.length ? " " : ""}${baseName}${
+    suffixes.length ? " " : ""
+  }${suffixes.join(" ")}`.trim();
 
   // 8) Grey überschreibt (langfristig)
   const isGrey = G !== "gg";
   const tags = [];
-  if (creamNote) tags.push(creamNote);
-  if (pearlNote) tags.push(pearlNote);
-  else if (isPearlCarrier) tags.push("Pearl Träger (crpl)");
-  if (champagneNote) tags.push(champagneNote);
+  if (pearlCarrier) tags.push("Pearl Träger (crpl)");
   if (silverNote) tags.push(silverNote);
-  if (dunNote) tags.push(dunNote);
   if (isGrey) tags.push("Grey");
 
-  const shown = isGrey ? `Grey (${withPatterns})` : withPatterns;
+  // Grey: immer nur "Grey" + voller Name ohne Grey in Klammern
+  const shown = isGrey ? `Grey (${withAffixes})` : withAffixes;
   const detail = null;
   return { shown, detail, tags };
 }
