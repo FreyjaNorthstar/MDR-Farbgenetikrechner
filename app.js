@@ -1,6 +1,6 @@
 const LOCI = [
   // Reihenfolge passend zur UI:
-  // Extension, Agouti, Dun, (Cream/Pearl), Champagne, Grey, Silver
+  // Extension, Agouti, Dun, (Cream/Pearl), Champagne, Grey, Silver, Flaxen, Sooty, Rabicano
   {
     key: "E",
     label: "Extension (E/e)",
@@ -44,6 +44,24 @@ const LOCI = [
     label: "Silver (Z/z)",
     alleleOrder: ["Z", "z"],
     genotypes: ["ZZ", "Zz", "zz"],
+  },
+  {
+    key: "Fl",
+    label: "Flaxen (Fl/fl)",
+    alleleOrder: ["Fl", "fl"],
+    genotypes: ["FlFl", "Flfl", "flfl"],
+  },
+  {
+    key: "So",
+    label: "Sooty (So/so)",
+    alleleOrder: ["So", "so"],
+    genotypes: ["SoSo", "Soso", "soso"],
+  },
+  {
+    key: "Rb",
+    label: "Rabicano (Rb/rb)",
+    alleleOrder: ["Rb", "rb"],
+    genotypes: ["RbRb", "Rbrb", "rbrb"],
   },
 ];
 
@@ -140,7 +158,12 @@ function agoutiCategory(agoutiGenotype) {
   return "black";
 }
 
-function derivePhenotype({ E, A, G, CrPrl, Ch, Z, D }) {
+function addVisibleModifiers(name, modifiers) {
+  if (modifiers.length === 0) return name;
+  return `${name} (${modifiers.join(", ")})`;
+}
+
+function derivePhenotype({ E, A, G, CrPrl, Ch, Z, D, Fl, So, Rb }) {
   // Sehr vereinfachte Ableitung, aber konsistent und erweiterbar.
   // 1) Basisfarbe via E/A
   const hasBlackPigment = E !== "ee";
@@ -247,7 +270,23 @@ function derivePhenotype({ E, A, G, CrPrl, Ch, Z, D }) {
     else withDun = `${baseSilver} Dun`;
   }
 
-  // 6) Grey überschreibt (langfristig)
+  // 6) weitere Gene (sichtbar)
+  const visibleMods = [];
+
+  // Flaxen: nur sichtbar als flfl bei Grundfarbe Chestnut (und nur wenn keine Aufhellung am Cr/Prl-Locus aktiv ist)
+  if (Fl === "flfl" && base === "Chestnut" && CrPrl === "crcr") {
+    visibleMods.push("Flaxen");
+  }
+
+  // Sooty: dominant, immer sichtbar
+  if (So !== "soso") visibleMods.push("Sooty");
+
+  // Rabicano: dominant, immer sichtbar
+  if (Rb !== "rbrb") visibleMods.push("Rabicano");
+
+  const withMods = addVisibleModifiers(withDun, visibleMods);
+
+  // 7) Grey überschreibt (langfristig)
   const isGrey = G !== "gg";
   const tags = [];
   if (creamNote) tags.push(creamNote);
@@ -258,8 +297,8 @@ function derivePhenotype({ E, A, G, CrPrl, Ch, Z, D }) {
   if (dunNote) tags.push(dunNote);
   if (isGrey) tags.push("Grey");
 
-  const shown = isGrey ? "Grey" : withDun;
-  const detail = isGrey ? `Grundfarbe darunter: ${withDun}` : null;
+  const shown = isGrey ? `Grey (${withMods})` : withMods;
+  const detail = null;
   return { shown, detail, tags };
 }
 
@@ -371,6 +410,9 @@ function resetToDefaults() {
     Ch: "chch",
     Z: "zz",
     D: "dd",
+    Fl: "FlFl",
+    So: "soso",
+    Rb: "rbrb",
   };
 
   for (const locus of LOCI) {
